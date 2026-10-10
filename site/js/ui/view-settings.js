@@ -114,7 +114,7 @@ export async function renderSettings(root, ctx, { setup = false } = {}) {
     sections.push(h('div', { class: 'sticky-actions' },
       h('a', { class: 'btn btn-primary btn-block', href: href('my') }, 'Показати мій розклад')));
   } else {
-    sections.push(dataSection(ctx));
+    sections.push(themeSection(ctx), dataSection(ctx));
   }
   append(root, ...sections.filter(Boolean));
 }
@@ -154,6 +154,20 @@ function subgroupSection(ctx, subgroups) {
     h('div', { class: 'segmented segmented-wide', role: 'radiogroup', 'aria-label': 'Підгрупа' },
       options.map((n) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(current === n), class: current === n ? 'is-active' : '', onclick: () => choose(n) }, `${n}`)),
       h('button', { type: 'button', role: 'radio', 'aria-checked': String(current == null), class: current == null ? 'is-active' : '', onclick: () => choose(null) }, 'Усі'),
+    ),
+  );
+}
+
+function themeSection(ctx) {
+  const current = ctx.ui.theme;
+  const choose = (theme) => {
+    ctx.setUi({ theme });
+    ctx.rerender();
+  };
+  const options = [[null, 'Системна'], ['light', 'Світла'], ['dark', 'Темна']];
+  return section('Тема', null,
+    h('div', { class: 'segmented segmented-wide', role: 'radiogroup', 'aria-label': 'Тема' },
+      options.map(([value, label]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(current === value), class: current === value ? 'is-active' : '', onclick: () => choose(value) }, label)),
     ),
   );
 }

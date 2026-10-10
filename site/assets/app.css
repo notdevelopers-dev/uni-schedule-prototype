@@ -2,7 +2,7 @@
 
 :root {
   /* Кожен колір — light-dark(світлий, темний). Яку половину взяти, вирішує color-scheme:
-     «light dark» — як у системі. */
+     «light dark» — як у системі; вибрану в налаштуваннях тему ставить на <html> js/theme.js. */
   color-scheme: light dark;
   --bg: light-dark(#f4f5f7, #101318);
   --surface: light-dark(#ffffff, #171b22);

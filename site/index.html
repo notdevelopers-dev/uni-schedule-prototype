@@ -7,6 +7,13 @@
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#171b22" media="(prefers-color-scheme: dark)">
   <title>Розклад пар</title>
+  <script>
+    // Збережену тему застосовуємо до першого відмалювання, щоб сторінка не блимала (див. js/theme.js; ключ — js/prefs.js).
+    try {
+      var theme = JSON.parse(localStorage.getItem('lnu-rozklad:ui:v1') || '{}').theme;
+      if (theme === 'light' || theme === 'dark') document.documentElement.style.colorScheme = theme;
+    } catch (e) {}
+  </script>
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/app.css">
   <script type="module" src="js/main.js"></script>

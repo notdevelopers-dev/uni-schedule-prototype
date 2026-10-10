@@ -10,7 +10,7 @@ globalThis.window = {
     removeItem: (k) => store.delete(k),
   },
 };
-const { defaultPrefs, loadPrefs, savePrefs } = await import('../site/js/prefs.js');
+const { clearPrefs, defaultPrefs, loadPrefs, loadUi, savePrefs, saveUi } = await import('../site/js/prefs.js');
 
 test('за замовчуванням нічого не приховано', () => {
   store.clear();
@@ -54,4 +54,23 @@ test('збереження й повторне читання', () => {
   const p = { ...defaultPrefs(), hiddenElectives: [{ titleKey: 'a', title: 'A', teacherKey: 'b', teacherName: 'B' }] };
   assert.equal(savePrefs(p), true);
   assert.deepEqual(loadPrefs(), p);
+});
+
+test('тема: за замовчуванням як у системі, сміття ігнорується', () => {
+  store.clear();
+  assert.equal(loadUi().theme, null);
+  saveUi({ ...loadUi(), theme: 'dark' });
+  assert.equal(loadUi().theme, 'dark');
+  store.set('lnu-rozklad:ui:v1', JSON.stringify({ theme: 'purple' }));
+  assert.equal(loadUi().theme, null);
+});
+
+test('«Скинути мій вибір» не скидає тему', () => {
+  store.clear();
+  savePrefs({ ...defaultPrefs(), subgroup: 2 });
+  saveUi({ ...loadUi(), theme: 'light', view: 'week' });
+  clearPrefs();
+  assert.deepEqual(loadPrefs(), defaultPrefs());
+  assert.equal(loadUi().theme, 'light');
+  assert.equal(loadUi().view, null, 'решта налаштувань інтерфейсу скидається, як і раніше');
 });

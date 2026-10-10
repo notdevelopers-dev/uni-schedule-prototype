@@ -90,19 +90,22 @@ export function savePrefs(prefs) {
 
 export function clearPrefs() {
   try {
+    const { theme } = loadUi(); // тема — не «мій вибір», її не скидаємо
     storage()?.removeItem(PREFS_KEY);
     storage()?.removeItem(UI_KEY);
+    if (theme) saveUi({ theme });
   } catch {
     // нічого страшного
   }
 }
 
-/** Дрібні зручності інтерфейсу: останній вигляд «день/тиждень», нещодавні аудиторії й викладачі. */
+/** Дрібні зручності інтерфейсу: тема, останній вигляд «день/тиждень», нещодавні аудиторії й викладачі. */
 export function loadUi() {
   const raw = readJson(UI_KEY);
   const recent = (v) => (Array.isArray(v) ? v.filter((x) => isObj(x) && str(x.key) && str(x.label)).slice(0, RECENT_MAX) : []);
   return {
     view: raw?.view === 'week' || raw?.view === 'day' ? raw.view : null, // null — ще не вибирали: вирішує ширина екрана
+    theme: raw?.theme === 'light' || raw?.theme === 'dark' ? raw.theme : null, // null — як у системі
     recentRooms: recent(raw?.recentRooms),
     recentTeachers: recent(raw?.recentTeachers),
   };

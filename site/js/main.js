@@ -5,6 +5,7 @@ import { minutesNow, setNowOverride } from './lib/dates.js';
 import { createRepository } from './data/repository.js';
 import { makeClassifier } from './domain/electives.js';
 import { defaultPrefs, loadPrefs, loadUi, savePrefs, saveUi } from './prefs.js';
+import { applyTheme } from './theme.js';
 import { h, replaceChildren } from './ui/dom.js';
 import { go, href, parseHash } from './ui/router.js';
 import { renderMy } from './ui/view-my.js';
@@ -23,6 +24,7 @@ const state = {
   classify: makeClassifier(),
   nav: { prev: null, next: null },
 };
+applyTheme(state.ui.theme);
 
 const $view = document.getElementById('view');
 const $title = document.getElementById('title');
@@ -84,6 +86,7 @@ function makeContext(route, token) {
     setUi(patch) {
       state.ui = { ...state.ui, ...patch };
       saveUi(state.ui);
+      if ('theme' in patch) applyTheme(state.ui.theme);
     },
     setNav(nav) {
       state.nav = nav;
