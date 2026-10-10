@@ -153,8 +153,8 @@ export function lessonCard(lesson, { mode = 'my', compact = false, timing = null
     // Позначка для команди: відома проблема даних чи евристики, що стосується цієї пари.
     for (const issue of issues) {
       extras.push(h('details', { class: 'known-issue' },
-        h('summary', null, icon('warn'), `Відома проблема: ${issue.short ?? issue.title}`),
-        h('p', null, issue.text),
+        h('summary', { title: issue.short ?? issue.title }, icon('warn'), 'відома проблема'),
+        h('p', null, h('strong', null, `${issue.short ?? issue.title}. `), issue.text),
         h('a', { href: href('issues') }, 'Усі відомі проблеми прототипу')));
     }
   }

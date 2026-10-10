@@ -412,11 +412,16 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
 .meta-text { display: inline-block; padding: 3px 0; }
 .note { margin-top: 6px; font-size: 0.88rem; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); }
 .note-alert { background: var(--c-control-soft); }
-.known-issue { margin-top: 8px; font-size: 0.86rem; border-radius: 10px; background: var(--warn-soft); padding: 6px 10px; }
-.known-issue summary { cursor: pointer; font-weight: 700; color: var(--warn); display: flex; align-items: center; gap: 6px; min-height: 28px; list-style: none; }
+.known-issue { margin-top: 6px; font-size: 0.75rem; }
+.known-issue summary {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 4px; list-style: none;
+  padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-weight: 600; opacity: 0.85;
+}
+.known-issue summary:hover, .known-issue[open] summary { opacity: 1; }
+.known-issue summary svg { width: 12px; height: 12px; }
 .known-issue summary::-webkit-details-marker { display: none; }
-.known-issue summary::after { content: '▾'; margin-left: auto; }
-.known-issue[open] summary::after { content: '▴'; }
+.known-issue[open] { padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); font-size: 0.84rem; }
+.known-issue[open] summary { padding: 0; background: none; }
 .known-issue p { margin: 4px 0 6px; color: var(--text); }
 .badge-issue { background: var(--warn-soft); color: var(--warn); border-color: transparent; gap: 4px; }
 .badge-kind { gap: 4px; margin-bottom: 8px; background: var(--warn-soft); color: var(--warn); border-color: transparent; }
