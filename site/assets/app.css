@@ -2,23 +2,23 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f3f5fa;
+  --bg: #f4f5f7;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --accent: #1d4ed8;
+  --surface-2: #f8f9fb;
+  --text: #16202e;
+  --muted: #5f6b7a;
+  --border: #e3e6eb;
+  --accent: #3e5c86;
   --accent-text: #ffffff;
-  --accent-soft: #dbeafe;
+  --accent-soft: #e6ebf2;
   --warn: #b45309;
   --warn-soft: #fef3c7;
-  --info-soft: #e0ecff;
+  --info-soft: #eceff4;
   --danger: #b91c1c;
   --now: #16a34a;
   --now-soft: #dcfce7;
 
-  --c-lecture: #2563eb;   --c-lecture-soft: #dbeafe;
+  --c-lecture: #44659a;   --c-lecture-soft: #e4eaf3;
   --c-lab: #047857;       --c-lab-soft: #d1fae5;
   --c-practice: #b45309;  --c-practice-soft: #fef3c7;
   --c-control: #b91c1c;   --c-control-soft: #fee2e2;
@@ -34,27 +34,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1120;
-    --surface: #131b2e;
-    --surface-2: #182238;
-    --text: #e5e7eb;
-    --muted: #94a3b8;
-    --border: #26324a;
-    --accent: #60a5fa;
-    --accent-text: #0b1120;
-    --accent-soft: #1e3a5f;
+    --bg: #101318;
+    --surface: #171b22;
+    --surface-2: #1c212a;
+    --text: #e4e6ea;
+    --muted: #9aa3b0;
+    --border: #2a303a;
+    --accent: #93acd0;
+    --accent-text: #101318;
+    --accent-soft: #252f3f;
     --warn: #fbbf24;
     --warn-soft: #3a2a0c;
-    --info-soft: #172a4a;
+    --info-soft: #1f2632;
     --danger: #f87171;
     --now: #4ade80;
     --now-soft: #143322;
 
-    --c-lecture: #93c5fd;   --c-lecture-soft: #1c2f55;
+    --c-lecture: #a5bad8;   --c-lecture-soft: #232d3d;
     --c-lab: #6ee7b7;       --c-lab-soft: #123b31;
     --c-practice: #fcd34d;  --c-practice-soft: #3b2e0f;
     --c-control: #fca5a5;   --c-control-soft: #3f1a1a;
-    --c-other: #cbd5e1;     --c-other-soft: #273247;
+    --c-other: #cbd2dc;     --c-other-soft: #262c36;
     --c-reserved: #c4b5fd;  --c-reserved-soft: #2c2350;
     --shadow: none;
   }
@@ -91,12 +91,10 @@ button, input { font: inherit; color: inherit; }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
   padding-top: env(safe-area-inset-top);
-}
-@media (prefers-color-scheme: dark) {
-  .topbar { background: var(--surface); color: var(--text); border-bottom: 1px solid var(--border); }
 }
 .topbar-inner {
   max-width: 760px;
@@ -117,16 +115,14 @@ button, input { font: inherit; color: inherit; }
   min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgb(255 255 255 / 40%);
-  background: rgb(255 255 255 / 14%);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   color: inherit;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
 }
-@media (prefers-color-scheme: dark) {
-  .view-switch { border-color: var(--border); background: var(--surface-2); }
-}
+.view-switch:hover { border-color: var(--accent); color: var(--accent); }
 .topbar h1 { font-size: 1.15rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar h1 a { color: inherit; text-decoration: none; }
 .topbar p { font-size: 0.8rem; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -649,11 +645,10 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
     padding: 0 14px;
     border-radius: 10px;
     font-size: 0.92rem;
-    color: inherit;
-    opacity: 0.85;
+    color: var(--muted);
   }
-  .tabbar a:hover { opacity: 1; background: rgb(255 255 255 / 10%); }
-  .tabbar a.is-active { color: inherit; opacity: 1; background: rgb(255 255 255 / 20%); }
+  .tabbar a:hover { color: var(--text); background: var(--surface-2); }
+  .tabbar a.is-active { color: var(--accent); background: var(--accent-soft); }
   .tabbar svg { width: 20px; height: 20px; }
   .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
 }
@@ -663,11 +658,6 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
   .week-grid { display: grid; }
   .week-grid-empty { display: block; }
   .view-inner:has(.week-grid) { max-width: 1120px; }
-}
-@media (min-width: 960px) and (prefers-color-scheme: dark) {
-  .tabbar a { color: var(--muted); opacity: 1; }
-  .tabbar a:hover { color: var(--text); background: var(--surface-2); }
-  .tabbar a.is-active { color: var(--accent); background: var(--accent-soft); }
 }
 
 @media (prefers-reduced-motion: reduce) {
