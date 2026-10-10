@@ -216,6 +216,7 @@ Workflow [`.github/workflows/update-schedule.yml`](.github/workflows/update-sche
    Інакше бот комітить `site/data.json` у `main` і запускає деплой на Pages: пуш з `GITHUB_TOKEN` сам його не запускає.
 
 Локально: `node scripts/fetch-schedule.mjs` (змінні `GROUPS`, `WEEKS`, `OUT`, `REFRESH_LIST`, `ENDPOINT` — див. початок файлу).
+Щоб не смикати деканат під час розробки, є мок: `node scripts/mock-dekanat.mjs &`, далі збирач з `ENDPOINT=http://127.0.0.1:8765/`.
 GitHub вимикає `schedule`-workflow після 60 днів без активності в репозиторії; тоді його треба ввімкнути знову у вкладці Actions.
 
 ## Що з майбутнім бекендом
