@@ -6,7 +6,7 @@ import { pushRecent } from '../prefs.js';
 import { append, h, icon, replaceChildren } from './dom.js';
 import { href } from './router.js';
 import {
-  attachSwipe, coverageNotice, dataFooter, dayBlock, notice, toolbar, viewSwitch, weekBlock, weekRange,
+  attachSwipe, coverageNotice, dataFooter, dayBlock, notice, pickView, toolbar, viewSwitch, weekBlock, weekRange,
 } from './schedule.js';
 
 const LIST_LIMIT = 80;
@@ -142,7 +142,7 @@ function rank(list, q, kind) {
 
 async function renderObject(root, ctx, kindName, kind, key) {
   const { route } = ctx;
-  const view = route.query.view === 'week' || route.query.view === 'day' ? route.query.view : ctx.ui.view;
+  const view = pickView(route, ctx.ui);
   const date = isIsoDate(route.query.date) ? route.query.date : todayIso();
   const range = view === 'week' ? weekRange(date) : { from: date, to: date };
   const res = await kind.get(ctx.repo, key, range);

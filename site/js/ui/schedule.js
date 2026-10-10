@@ -21,6 +21,17 @@ export function inDataRange(date, meta) {
   return !r || (date >= r.from && date <= r.to);
 }
 
+/** Ширина, з якої тиждень показується сіткою і відкривається за замовчуванням (як у CSS). */
+const WIDE_QUERY = '(min-width: 960px)';
+
+/** Вигляд «день/тиждень»: з адреси, інакше останній вибраний, інакше тиждень на десктопі й день на телефоні. */
+export function pickView(route, ui) {
+  const q = route.query.view;
+  if (q === 'week' || q === 'day') return q;
+  if (ui.view) return ui.view;
+  return globalThis.matchMedia?.(WIDE_QUERY).matches ? 'week' : 'day';
+}
+
 /** Панель дат: ‹ дата › і «Сьогодні», коли показано не поточний день/тиждень. */
 export function toolbar({ date, view, onChange }) {
   const step = view === 'week' ? 7 : 1;
@@ -98,7 +109,7 @@ const AUDIENCE_TAG = {
  * Картка пари.
  * mode: 'my' — показуємо аудиторію й викладача; 'room' — викладача й групи; 'teacher' — аудиторію й групи.
  */
-export function lessonCard(lesson, { mode = 'my', compact = false, timing = null, next = false, foreign = false, actions = null } = {}) {
+export function lessonCard(lesson, { mode = 'my', compact = false, grid = false, timing = null, next = false, foreign = false, actions = null } = {}) {
   const tone = lesson.kind === 'lesson' ? lesson.type.tone : 'reserved';
   const title = lesson.kind === 'lesson' ? lesson.title : lesson.reservation || 'Слот без назви';
   const state = timing?.state;
@@ -163,7 +174,7 @@ export function lessonCard(lesson, { mode = 'my', compact = false, timing = null
     class: ['lesson', `tone-${tone}`, compact && 'is-compact', state && `is-${state}`, next && 'is-next', foreign && 'is-foreign', lesson.replacement && 'has-replacement'],
     dataset: { id: lesson.id },
   },
-  compact ? h('span', { class: 'lesson-time' }, h('b', null, lesson.number), ' ', lesson.start) : null,
+  compact && !grid ? h('span', { class: 'lesson-time' }, h('b', null, lesson.number), ' ', lesson.start) : null,
   h('div', { class: 'lesson-main' },
     // Компактна картка (тиждень): назва першою, мітки — в одному рядку з аудиторією/викладачем.
     compact ? null : badges.length ? h('div', { class: 'badges' }, badges) : null,
@@ -263,12 +274,19 @@ function noData(date, meta) {
   );
 }
 
-/** Тиждень: дні з компактними картками. Сб/Нд показуються, лише якщо в них є пари. */
+/**
+ * Тиждень. Сб/Нд показуються, лише якщо в них є пари.
+ * Рендеримо обидва вигляди, CSS показує один: список днів на телефоні, сітку «дні × пари» на десктопі.
+ */
 export function weekBlock(date, lessons, opts) {
-  const { mode, meta, hiddenIds = new Set(), dayHref } = opts;
   const byDate = groupByDate(lessons);
   const today = todayIso();
   const days = weekDays(date).filter((d) => weekdayIndex(d) < 5 || byDate.has(d) || d === today);
+  return h('div', { class: 'week-wrap' }, weekList(days, byDate, opts), weekGrid(days, byDate, lessons, opts));
+}
+
+function weekList(days, byDate, { mode, meta, hiddenIds = new Set(), dayHref }) {
+  const today = todayIso();
   return h('div', { class: 'week' }, days.map((d) => {
     const list = byDate.get(d) ?? [];
     const rel = relativeDayLabel(d);
@@ -286,6 +304,44 @@ export function weekBlock(date, lessons, opts) {
       h('div', { class: 'week-day-body' }, body),
     );
   }));
+}
+
+/** Сітка тижня: стовпці — дні, рядки — номери пар («дзвінки» з даних). */
+function weekGrid(days, byDate, lessons, { mode, meta, hiddenIds = new Set(), dayHref }) {
+  const today = todayIso();
+  const used = lessons.map((l) => l.number).filter((n) => n != null);
+  if (!used.length) {
+    const anyData = days.some((d) => inDataRange(d, meta));
+    return h('div', { class: 'week-grid-empty empty' }, h('p', null, anyData ? 'Цього тижня пар немає' : 'На цей тиждень даних немає'));
+  }
+  const min = Math.min(...used);
+  const max = Math.max(...used);
+  const bells = new Map((meta?.bells ?? []).map((b) => [b.number, b]));
+  const numbers = [...new Set([...used, ...[...bells.keys()].filter((n) => n >= min && n <= max)])].sort((a, b) => a - b);
+  const timeOf = (n) => bells.get(n) ?? lessons.find((l) => l.number === n) ?? {};
+
+  const head = [h('div', { class: 'wg-corner' })];
+  for (const d of days) {
+    const count = (byDate.get(d) ?? []).length;
+    const rel = relativeDayLabel(d);
+    head.push(h('a', { class: ['wg-day', d === today && 'is-today'], href: dayHref(d) },
+      h('span', { class: 'wg-day-name' }, weekdayShort(d), ' ', formatDayLong(d).split(', ')[1]),
+      h('span', { class: 'muted' }, !inDataRange(d, meta) ? 'немає даних'
+        : [rel, count ? `${count} ${plural(count, ['пара', 'пари', 'пар'])}` : 'пар немає'].filter(Boolean).join(' · ')),
+    ));
+  }
+  const rows = numbers.flatMap((n) => {
+    const t = timeOf(n);
+    return [
+      h('div', { class: 'wg-time' }, h('span', { class: 'slot-num' }, n), h('span', null, t.start ?? ''), h('span', { class: 'muted' }, t.end ?? '')),
+      ...days.map((d) => {
+        const cell = (byDate.get(d) ?? []).filter((l) => l.number === n);
+        return h('div', { class: ['wg-cell', d === today && 'is-today', !inDataRange(d, meta) && 'is-nodata'] },
+          cell.map((l) => lessonCard(l, { mode, compact: true, grid: true, timing: lessonTiming(l), foreign: hiddenIds.has(l.id) })));
+      }),
+    ];
+  });
+  return h('div', { class: 'week-grid', style: `--days:${days.length}` }, head, rows);
 }
 
 export function notice(kind, ...content) {

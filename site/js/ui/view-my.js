@@ -6,7 +6,7 @@ import { addExternal, buildCatalog, filterForUser, listSubgroups, matchesElectiv
 import { append, h, icon } from './dom.js';
 import { href } from './router.js';
 import {
-  attachSwipe, dataFooter, dayBlock, inDataRange, lessonTiming, notice, toolbar, viewSwitch, weekBlock, weekRange,
+  attachSwipe, dataFooter, dayBlock, inDataRange, lessonTiming, notice, pickView, toolbar, viewSwitch, weekBlock, weekRange,
 } from './schedule.js';
 
 /** Пари групи за діапазоном з урахуванням вибору користувача. */
@@ -73,7 +73,7 @@ export async function renderMy(root, ctx) {
     return;
   }
 
-  const view = route.query.view === 'week' || route.query.view === 'day' ? route.query.view : ctx.ui.view;
+  const view = pickView(route, ctx.ui);
   let date = isIsoDate(route.query.date) ? route.query.date : null;
   let autoNote = null;
   if (!date) {

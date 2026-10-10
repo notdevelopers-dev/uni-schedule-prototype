@@ -471,6 +471,36 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
 .week-day.is-today .week-day-head { border-bottom: 2px solid var(--accent); }
 .week-day-body { display: grid; gap: 6px; }
 
+/* Сітка тижня (лише десктоп): стовпці — дні, рядки — пари. */
+.week-grid, .week-grid-empty { display: none; }
+.week-grid {
+  grid-template-columns: 4rem repeat(var(--days), minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+.wg-day {
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px 8px;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 2px solid var(--border);
+  font-size: 0.9rem;
+}
+.wg-day:hover .wg-day-name { color: var(--accent); }
+.wg-day .muted { font-size: 0.8rem; }
+.wg-day-name { font-weight: 700; }
+.wg-day.is-today { border-bottom-color: var(--accent); }
+.wg-day.is-today .wg-day-name { color: var(--accent); }
+.wg-time { display: grid; justify-items: center; align-content: start; gap: 2px; padding-top: 6px; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.wg-time .slot-num { width: 26px; height: 26px; font-size: 0.85rem; }
+.wg-cell { display: grid; gap: 6px; align-content: start; min-width: 0; min-height: 3.5rem; padding: 3px; border-radius: 10px; }
+.wg-cell.is-today { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+.wg-cell.is-nodata { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--surface-2) 6px 12px); }
+.wg-cell .lesson.is-compact { display: block; padding: 7px 9px; }
+.wg-cell .lesson.is-compact .lesson-title { font-size: 0.88rem; line-height: 1.25; }
+.wg-cell .lesson.is-compact .lesson-meta { font-size: 0.78rem; }
+
 /* ---------- Порожні стани, підвал ---------- */
 
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
@@ -626,6 +656,13 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
   .tabbar a.is-active { color: inherit; opacity: 1; background: rgb(255 255 255 / 20%); }
   .tabbar svg { width: 20px; height: 20px; }
   .toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
+/* Десктоп: тиждень сіткою замість списку, і ширший контейнер під неї. */
+@media (min-width: 960px) {
+  .week-wrap > .week { display: none; }
+  .week-grid { display: grid; }
+  .week-grid-empty { display: block; }
+  .view-inner:has(.week-grid) { max-width: 1120px; }
 }
 @media (min-width: 960px) and (prefers-color-scheme: dark) {
   .tabbar a { color: var(--muted); opacity: 1; }

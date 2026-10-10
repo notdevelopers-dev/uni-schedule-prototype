@@ -102,7 +102,7 @@ export function loadUi() {
   const raw = readJson(UI_KEY);
   const recent = (v) => (Array.isArray(v) ? v.filter((x) => isObj(x) && str(x.key) && str(x.label)).slice(0, RECENT_MAX) : []);
   return {
-    view: raw?.view === 'week' ? 'week' : 'day',
+    view: raw?.view === 'week' || raw?.view === 'day' ? raw.view : null, // null — ще не вибирали: вирішує ширина екрана
     recentRooms: recent(raw?.recentRooms),
     recentTeachers: recent(raw?.recentTeachers),
   };
