@@ -1,63 +1,43 @@
 /* Розклад пар — неофіційний прототип. Mobile-first, без залежностей. */
 
 :root {
+  /* Кожен колір — light-dark(світлий, темний). Яку половину взяти, вирішує color-scheme:
+     «light dark» — як у системі. */
   color-scheme: light dark;
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --surface-2: #f8f9fb;
-  --text: #16202e;
-  --muted: #5f6b7a;
-  --border: #e3e6eb;
-  --accent: #3e5c86;
-  --accent-text: #ffffff;
-  --accent-soft: #e6ebf2;
-  --warn: #b45309;
-  --warn-soft: #fef3c7;
-  --info-soft: #eceff4;
-  --danger: #b91c1c;
-  --now: #16a34a;
-  --now-soft: #dcfce7;
+  --bg: light-dark(#f4f5f7, #101318);
+  --surface: light-dark(#ffffff, #171b22);
+  --surface-2: light-dark(#f8f9fb, #1c212a);
+  --text: light-dark(#16202e, #e4e6ea);
+  --muted: light-dark(#5f6b7a, #9aa3b0);
+  --border: light-dark(#e3e6eb, #2a303a);
+  --accent: light-dark(#3e5c86, #93acd0);
+  --accent-text: light-dark(#ffffff, #101318);
+  --accent-soft: light-dark(#e6ebf2, #252f3f);
+  --warn: light-dark(#b45309, #fbbf24);
+  --warn-soft: light-dark(#fef3c7, #3a2a0c);
+  --info-soft: light-dark(#eceff4, #1f2632);
+  --danger: light-dark(#b91c1c, #f87171);
+  --now: light-dark(#16a34a, #4ade80);
+  --now-soft: light-dark(#dcfce7, #143322);
 
-  --c-lecture: #44659a;   --c-lecture-soft: #e4eaf3;
-  --c-lab: #047857;       --c-lab-soft: #d1fae5;
-  --c-practice: #b45309;  --c-practice-soft: #fef3c7;
-  --c-control: #b91c1c;   --c-control-soft: #fee2e2;
-  --c-other: #475569;     --c-other-soft: #e2e8f0;
-  --c-reserved: #6d28d9;  --c-reserved-soft: #ede9fe;
+  --c-lecture: light-dark(#44659a, #a5bad8);
+  --c-lecture-soft: light-dark(#e4eaf3, #232d3d);
+  --c-lab: light-dark(#047857, #6ee7b7);
+  --c-lab-soft: light-dark(#d1fae5, #123b31);
+  --c-practice: light-dark(#b45309, #fcd34d);
+  --c-practice-soft: light-dark(#fef3c7, #3b2e0f);
+  --c-control: light-dark(#b91c1c, #fca5a5);
+  --c-control-soft: light-dark(#fee2e2, #3f1a1a);
+  --c-other: light-dark(#475569, #cbd2dc);
+  --c-other-soft: light-dark(#e2e8f0, #262c36);
+  --c-reserved: light-dark(#6d28d9, #c4b5fd);
+  --c-reserved-soft: light-dark(#ede9fe, #2c2350);
 
   --radius: 14px;
   --topbar-h: 56px;
   --tabbar-h: 60px;
-  --shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 1px rgb(15 23 42 / 4%);
+  --shadow: 0 1px 2px light-dark(rgb(15 23 42 / 6%), transparent), 0 1px 1px light-dark(rgb(15 23 42 / 4%), transparent);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #101318;
-    --surface: #171b22;
-    --surface-2: #1c212a;
-    --text: #e4e6ea;
-    --muted: #9aa3b0;
-    --border: #2a303a;
-    --accent: #93acd0;
-    --accent-text: #101318;
-    --accent-soft: #252f3f;
-    --warn: #fbbf24;
-    --warn-soft: #3a2a0c;
-    --info-soft: #1f2632;
-    --danger: #f87171;
-    --now: #4ade80;
-    --now-soft: #143322;
-
-    --c-lecture: #a5bad8;   --c-lecture-soft: #232d3d;
-    --c-lab: #6ee7b7;       --c-lab-soft: #123b31;
-    --c-practice: #fcd34d;  --c-practice-soft: #3b2e0f;
-    --c-control: #fca5a5;   --c-control-soft: #3f1a1a;
-    --c-other: #cbd2dc;     --c-other-soft: #262c36;
-    --c-reserved: #c4b5fd;  --c-reserved-soft: #2c2350;
-    --shadow: none;
-  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -250,8 +230,7 @@ body.is-setup { padding-bottom: env(safe-area-inset-bottom); }
   color: var(--muted);
   cursor: pointer;
 }
-.segmented button.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-@media (prefers-color-scheme: dark) { .segmented button.is-active { background: var(--accent-soft); } }
+.segmented button.is-active { background: light-dark(var(--surface), var(--accent-soft)); color: var(--text); box-shadow: var(--shadow); }
 .segmented-wide { display: flex; }
 .segmented-wide button { flex: 1; min-height: 44px; font-size: 1.05rem; }
 
