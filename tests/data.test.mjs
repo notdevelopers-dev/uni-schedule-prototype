@@ -8,7 +8,7 @@ import { normalizeRozItem, mergeAcrossGroups } from '../site/js/domain/lessons.j
 import { addExternal, buildCatalog, filterForUser, makeClassifier } from '../site/js/domain/electives.js';
 import { KNOWN_ISSUES, issuesFor } from '../site/js/known-issues.js';
 
-const data = JSON.parse(readFileSync(new URL('../site/data.json', import.meta.url), 'utf8'));
+const data = JSON.parse(readFileSync(new URL('./fixtures/sample-export.json', import.meta.url), 'utf8'));
 
 const item = (over = {}) => ({
   object: 'ФЕІ-21с', date: '28.09.2026', comment: '', lesson_number: '2', lesson_name: '2',

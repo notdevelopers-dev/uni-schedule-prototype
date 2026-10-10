@@ -1,0 +1,65 @@
+# Щотижня забирає з деканату розклад ФЕІ-21…25 на поточний і 4 наступні тижні й комітить site/data.json у main.
+# Пуш токеном GITHUB_TOKEN не запускає інші workflow, тому деплой на Pages запускаємо явно (workflow_dispatch так можна).
+name: Update schedule data
+
+on:
+  schedule:
+    - cron: '47 2 * * 1' # понеділок, ~05:47 за Києвом
+  workflow_dispatch:
+    inputs:
+      weeks:
+        description: Скільки тижнів після поточного брати
+        default: '4'
+      groups:
+        description: Префікси груп через кому (порожньо — ФЕІ-21…ФЕІ-25)
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: update-schedule
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Europe/Kyiv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
+
+      - name: Fetch schedule
+        run: node scripts/fetch-schedule.mjs
+        env:
+          WEEKS: ${{ inputs.weeks || '4' }}
+          GROUPS: ${{ inputs.groups }}
+
+      - name: Commit and push
+        id: commit
+        run: |
+          if git diff --quiet -- site/data.json; then
+            echo "Без змін"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/data.json
+          git commit -m "Оновити розклад ($(date +%d.%m.%Y))"
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Pages
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run pages.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
