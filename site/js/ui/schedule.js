@@ -366,6 +366,9 @@ export function coverageNotice(meta, tail) {
   );
 }
 
+/** Сайт не має стосунку до університету — це треба бачити на кожному екрані. */
+export const UNOFFICIAL = 'Неофіційний студентський сайт, не повʼязаний з університетом. Важливе звіряйте з офіційним розкладом.';
+
 export function dataFooter(meta) {
   if (!meta) return null;
   const parts = [];
@@ -378,6 +381,8 @@ export function dataFooter(meta) {
   if (meta.range) parts.push(`знімок ${formatDateShort(meta.range.from)} – ${formatDateShort(meta.range.to)}`);
   if (meta.coverage && !meta.coverage.complete) parts.push('дані неповні');
   return h('p', { class: 'data-footer' },
+    UNOFFICIAL,
+    h('br'),
     parts.join(' · '),
     parts.length ? h('br') : null,
     h('a', { href: href('issues') }, `Відомі проблеми прототипу (${KNOWN_ISSUES.length})`));

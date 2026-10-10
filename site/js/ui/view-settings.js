@@ -7,7 +7,7 @@ import { buildCatalog, listSubgroups, teacherDisciplines } from '../domain/elect
 import { clearPrefs, sameEntry, storageAvailable } from '../prefs.js';
 import { append, h, icon, replaceChildren } from './dom.js';
 import { href } from './router.js';
-import { coverageNotice, notice } from './schedule.js';
+import { coverageNotice, notice, UNOFFICIAL } from './schedule.js';
 
 const STATUS_LABEL = {
   ok: null,
@@ -21,7 +21,7 @@ const STATUS_LABEL = {
 // ---------- Вибір групи ----------
 
 export async function renderGroupPicker(root, ctx, { setup = false } = {}) {
-  ctx.setTitle(setup ? 'Розклад ЛНУ' : 'Вибір групи', setup ? 'крок 1 з 2 · група' : null);
+  ctx.setTitle(setup ? 'Розклад пар' : 'Вибір групи', setup ? 'крок 1 з 2 · група' : null);
   const groups = await ctx.repo.listGroups();
   if (!ctx.isCurrent()) return;
 
@@ -75,6 +75,7 @@ export async function renderGroupPicker(root, ctx, { setup = false } = {}) {
     setup ? h('div', { class: 'intro' },
       h('h2', null, 'Вітаємо!'),
       h('p', null, 'Виберіть групу один раз — далі сайт одразу відкриватиме ваш розклад, лише для вашої підгрупи та ваших вибіркових.'),
+      h('p', { class: 'muted small' }, UNOFFICIAL),
     ) : h('a', { class: 'back-link', href: href('settings') }, icon('left'), 'Налаштування'),
     h('div', { class: 'search' }, icon('search'), input),
     c && !c.complete && c.groupsTotal == null
@@ -93,7 +94,7 @@ export async function renderSettings(root, ctx, { setup = false } = {}) {
     ctx.redirect(href('setup'));
     return;
   }
-  ctx.setTitle(setup ? 'Розклад ЛНУ' : 'Налаштування', setup ? 'крок 2 з 2 · підгрупа й вибіркові' : null);
+  ctx.setTitle(setup ? 'Розклад пар' : 'Налаштування', setup ? 'крок 2 з 2 · підгрупа й вибіркові' : null);
   const group = await repo.findGroup(prefs.group);
   const { lessons } = group ? await repo.getGroupSchedule(group.id, ctx.meta.range ?? undefined) : { lessons: [] };
   if (!ctx.isCurrent()) return;
@@ -321,6 +322,7 @@ function dataSection(ctx) {
   ].filter(Boolean);
   return section('Дані', null,
     h('dl', { class: 'facts' }, rows.map(([k, v]) => [h('dt', null, k), h('dd', null, v)])),
+    h('p', { class: 'muted small' }, UNOFFICIAL),
     coverageNotice(m, 'Аудиторії й викладачі показують не всі пари.'),
     m.errors?.length ? notice('warn', m.errors.join(' ')) : null,
     storageAvailable() ? null : notice('warn', 'Браузер не дозволяє зберігати дані сайту — вибір не збережеться після закриття сторінки.'),

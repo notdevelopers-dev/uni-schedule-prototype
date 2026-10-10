@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  buildBundle, dateRange, filterGroupList, listObjects, matchesPrefix, rozkladUrl, sameContent, DEFAULT_PREFIXES,
+  buildBundle, dateRange, filterGroupList, listObjects, matchesPrefix, reusableGroupList, rozkladUrl, sameContent, DEFAULT_PREFIXES,
 } from '../scripts/fetch-schedule.mjs';
 import { buildIndex } from '../site/js/data/static-repository.js';
 
@@ -108,4 +108,30 @@ test('sameContent: час збору не рахується за зміну', (
   const b = { format: 'x', generated_at: '2', schedules: [{ id: '1', fetched_at: '2', export: exp('0') }] };
   assert.ok(sameContent(a, b));
   assert.ok(!sameContent(a, { ...b, schedules: [{ id: '1', export: exp('0', [item()]) }] }));
+});
+
+test('reusableGroupList: свіжий список з усіма групами не перезапитуємо', () => {
+  const list = filterGroupList(objList, ['ФЕІ-21', 'ФЕІ-22']);
+  const now = Date.parse('2026-10-12T03:00:00Z');
+  const prev = (at) => ({ format: 'lnu-rozklad-bundle/1', lists_fetched_at: at, lists: { group: list }, schedules: [] });
+  assert.equal(reusableGroupList(prev('2026-10-01T00:00:00Z'), ['ФЕІ-21', 'ФЕІ-22'], now), list);
+  assert.equal(reusableGroupList(prev('2026-09-01T00:00:00Z'), ['ФЕІ-21', 'ФЕІ-22'], now), null, 'застарів');
+  assert.equal(reusableGroupList(prev(undefined), ['ФЕІ-21'], now), null, 'невідомо коли');
+  assert.equal(reusableGroupList(prev('2026-10-01T00:00:00Z'), ['ФЕІ-21', 'ФЕІ-23'], now), null, 'бракує групи');
+  assert.equal(reusableGroupList({ psrozklad_export: {} }, ['ФЕІ-21'], now), null, 'не пакет');
+});
+
+test('buildBundle: групи, до яких не дійшли після зупинки, лишаються з попереднього знімка', () => {
+  const groupList = filterGroupList(objList, DEFAULT_PREFIXES);
+  const prevEntry = { mode: 'group', id: '-504', name: 'ФЕІ-22с', fetched_at: 'old', export: exp('0', [item({ object: 'ФЕІ-22с' })]) };
+  const { bundle, log } = buildBundle({
+    generatedAt: 'now', range, groupList, listsFetchedAt: 'list-at', previous: { format: 'lnu-rozklad-bundle/1', schedules: [prevEntry] },
+    results: [
+      { id: '-503', name: 'ФЕІ-21с', fetchedAt: 'now', export: exp('-8') },
+      { id: '-504', name: 'ФЕІ-22с', fetchedAt: null },
+    ],
+  });
+  assert.equal(bundle.schedules[1], prevEntry);
+  assert.equal(bundle.lists_fetched_at, 'list-at');
+  assert.match(log[1], /не запитувалося/);
 });

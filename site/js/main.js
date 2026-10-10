@@ -46,7 +46,7 @@ function setTitle(title, subtitle = null, link = null) {
   replaceChildren($title, link ? h('a', { href: link }, title) : title);
   $subtitle.textContent = subtitle ?? '';
   $subtitle.hidden = !subtitle;
-  document.title = title && title !== 'Розклад ЛНУ' ? `${title} · Розклад ЛНУ` : 'Розклад ЛНУ';
+  document.title = title && title !== 'Розклад пар' ? `${title} · Розклад пар` : 'Розклад пар';
 }
 
 let toastTimer = null;
@@ -197,6 +197,6 @@ prepare()
   .then(render)
   .catch((err) => {
     console.error(err);
-    setTitle('Розклад ЛНУ');
+    setTitle('Розклад пар');
     $view.replaceChildren(errorBox('Не вдалося завантажити розклад.', err));
   });

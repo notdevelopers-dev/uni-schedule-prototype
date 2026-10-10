@@ -1,10 +1,13 @@
 // Збирач розкладу: тягне з деканату розклад вибраних груп і пише пакет lnu-rozklad-bundle/1 у site/data.json.
+// Деканат — чужий сервер, тож запитів якомога менше: список груп береться з попереднього знімка (оновлюється раз на
+// LIST_MAX_AGE_DAYS днів або коли групи бракує), на коді -8 чи збої мережі збір зупиняється, решта груп лишається як була.
 // Запускається щотижня з .github/workflows/update-schedule.yml, можна й локально:
 //   node scripts/fetch-schedule.mjs
 // Налаштування через змінні середовища:
 //   GROUPS  — префікси назв груп через кому (за замовчуванням ФЕІ-21…ФЕІ-25);
 //   WEEKS   — скільки тижнів після поточного брати (за замовчуванням 4);
 //   OUT     — куди писати (за замовчуванням site/data.json);
+//   REFRESH_LIST=1 — примусово перезапитати список груп;
 //   ENDPOINT — адреса експорту (для перевірки на моку).
 // Без залежностей, потрібен Node 22+.
 
@@ -18,7 +21,9 @@ import { exportStatus } from '../site/js/data/psrozklad.js';
 export const ENDPOINT = process.env.ENDPOINT || 'https://dekanat.lnu.edu.ua/cgi-bin/timetable_export.cgi';
 export const DEFAULT_PREFIXES = ['ФЕІ-21', 'ФЕІ-22', 'ФЕІ-23', 'ФЕІ-24', 'ФЕІ-25'];
 const FORMAT = 'lnu-rozklad-bundle/1';
-const PAUSE_BETWEEN_REQUESTS_MS = 1500;
+const PAUSE_BETWEEN_REQUESTS_MS = 3000;
+const RETRY_DELAY_MS = 30_000;
+export const LIST_MAX_AGE_DAYS = 28;
 
 /** «ФЕІ 21с», «FEI-21c», «ФЕI–21с» → «ФЕІ-21С»: для порівняння назв груп. */
 export function groupKey(name) {
@@ -52,6 +57,18 @@ export function listObjects(json) {
   ).filter((o) => o.id);
 }
 
+/**
+ * Список груп з попереднього знімка, якщо він свіжий і в ньому є група на кожен префікс; інакше null (треба запитати).
+ * ID груп у деканаті стабільні, тож щотижня тягнути весь список факультетів немає сенсу.
+ */
+export function reusableGroupList(previous, prefixes, nowMs, maxAgeDays = LIST_MAX_AGE_DAYS) {
+  if (previous?.format !== FORMAT || !previous.lists?.group) return null;
+  const at = Date.parse(previous.lists_fetched_at ?? '');
+  if (!Number.isFinite(at) || nowMs - at > maxAgeDays * 86_400_000) return null;
+  const names = listObjects(previous.lists.group).map((g) => g.name);
+  return prefixes.every((p) => names.some((n) => matchesPrefix(n, [p]))) ? previous.lists.group : null;
+}
+
 /** Поточний тиждень (з понеділка) плюс weeks наступних. */
 export function dateRange(today, weeks) {
   const from = startOfWeek(today);
@@ -76,7 +93,7 @@ export function rozkladUrl({ id, from, to, mode = 'group' }) {
  * (-2/-3/-8/-70 тощо), лишає попередній розклад групи з попереднього пакета, якщо він є.
  * results: [{ id, name, export?, error?, fetchedAt }]
  */
-export function buildBundle({ generatedAt, range, groupList, results, previous }) {
+export function buildBundle({ generatedAt, range, groupList, listsFetchedAt = null, results, previous }) {
   const prevById = new Map(
     (previous?.format === FORMAT ? previous.schedules ?? [] : [])
       .filter((s) => (s.mode ?? 'group') === 'group')
@@ -90,7 +107,8 @@ export function buildBundle({ generatedAt, range, groupList, results, previous }
       log.push(`${r.name}: ${status.status === 'ok' ? `${count} пар` : `${status.message} (код ${status.code})`}`);
       return { mode: 'group', id: r.id, name: r.name, fetched_at: r.fetchedAt, export: r.export };
     }
-    const why = status ? `${status.message} (код ${status.code})` : `помилка запиту: ${r.error}`;
+    const why = status ? `${status.message} (код ${status.code})`
+      : r.error ? `помилка запиту: ${r.error}` : 'не запитувалося (збір зупинено)';
     const prev = prevById.get(String(r.id));
     if (prev) {
       log.push(`${r.name}: ${why} — лишаю знімок від ${prev.fetched_at ?? '?'}`);
@@ -104,6 +122,7 @@ export function buildBundle({ generatedAt, range, groupList, results, previous }
     format: FORMAT,
     generated_at: generatedAt,
     range: { from: toUaDate(range.from), to: toUaDate(range.to) },
+    lists_fetched_at: listsFetchedAt,
     lists: { group: groupList },
     schedules,
   };
@@ -113,28 +132,25 @@ export function buildBundle({ generatedAt, range, groupList, results, previous }
 /** Чи відрізняються пакети чимось, крім часу збору. */
 export function sameContent(a, b) {
   const strip = (x) => JSON.stringify(x && {
-    ...x, generated_at: null, schedules: (x.schedules ?? []).map((s) => ({ ...s, fetched_at: null })),
+    ...x, generated_at: null, lists_fetched_at: null, schedules: (x.schedules ?? []).map((s) => ({ ...s, fetched_at: null })),
   });
   return strip(a) === strip(b);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** GET + JSON з повторами: мережеві збої, 5xx і код -8 (пауза через навантаження). */
-async function fetchJson(url, { attempts = 4 } = {}) {
+/**
+ * GET + JSON. Мережевий збій чи 5xx — один повтор через 30 с; коди деканату (зокрема -8) не повторюємо:
+ * -8 означає, що сервер перевантажений, і повтор лише додасть навантаження.
+ */
+async function fetchJson(url, { attempts = 2 } = {}) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
-    if (i) await sleep(15_000 * 2 ** (i - 1));
+    if (i) await sleep(RETRY_DELAY_MS);
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(60_000), headers: { 'User-Agent': 'lnu-rozklad-collector' } });
+      const res = await fetch(url, { signal: AbortSignal.timeout(60_000), headers: { 'User-Agent': 'unofficial-rozklad-collector (weekly)' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = JSON.parse((await res.text()).replace(/^﻿/, ''));
-      const code = String(json?.psrozklad_export?.code ?? '0').trim();
-      if (code === '-8' && i < attempts - 1) {
-        lastError = new Error('код -8 (пауза через навантаження)');
-        continue;
-      }
-      return json;
+      return JSON.parse((await res.text()).replace(/^\uFEFF/, ''));
     } catch (err) {
       lastError = err;
       console.warn(`  спроба ${i + 1}/${attempts}: ${err.message}`);
@@ -161,33 +177,48 @@ async function main() {
 
   console.log(`Групи: ${groupsWanted.join(', ')}; період ${toUaDate(range.from)}–${toUaDate(range.to)}`);
 
-  let groupList;
-  try {
-    groupList = filterGroupList(await fetchJson(objListUrl('group')), groupsWanted);
-  } catch (err) {
-    if (previous?.format !== FORMAT || !previous.lists?.group) throw new Error(`Список груп недоступний: ${err.message}`);
-    console.warn(`Список груп недоступний (${err.message}), беру з попереднього знімка`);
-    groupList = previous.lists.group;
+  let groupList = process.env.REFRESH_LIST ? null : reusableGroupList(previous, groupsWanted, Date.now());
+  let listsFetchedAt = previous?.lists_fetched_at ?? null;
+  if (groupList) {
+    console.log(`Список груп — з попереднього знімка (${listsFetchedAt})`);
+  } else {
+    try {
+      groupList = filterGroupList(await fetchJson(objListUrl('group')), groupsWanted);
+      listsFetchedAt = new Date().toISOString();
+    } catch (err) {
+      if (previous?.format !== FORMAT || !previous.lists?.group) throw new Error(`Список груп недоступний: ${err.message}`);
+      console.warn(`Список груп недоступний (${err.message}), беру з попереднього знімка`);
+      groupList = previous.lists.group;
+    }
   }
   const groups = listObjects(groupList);
   if (!groups.length) throw new Error(`У списку груп немає жодної з: ${groupsWanted.join(', ')}`);
   console.log(`Знайдено ${groups.length}: ${groups.map((g) => g.name).join(', ')}`);
 
   const results = [];
+  let stopped = null;
   for (const g of groups) {
+    if (stopped) {
+      results.push({ ...g, fetchedAt: null });
+      continue;
+    }
     await sleep(PAUSE_BETWEEN_REQUESTS_MS);
     const fetchedAt = new Date().toISOString();
     try {
-      results.push({ ...g, fetchedAt, export: await fetchJson(rozkladUrl({ id: g.id, ...range })) });
+      const json = await fetchJson(rozkladUrl({ id: g.id, ...range }));
+      results.push({ ...g, fetchedAt, export: json });
+      if (String(json?.psrozklad_export?.code ?? '').trim() === '-8') stopped = 'деканат на паузі через навантаження (код -8)';
     } catch (err) {
       results.push({ ...g, fetchedAt, error: err.message });
+      stopped = `запит не вдався (${err.message})`;
     }
+    if (stopped) console.warn(`Зупиняю збір: ${stopped}. Решта груп лишається з попереднього знімка.`);
   }
 
-  const { bundle, log } = buildBundle({ generatedAt: new Date().toISOString(), range, groupList, results, previous });
+  const { bundle, log } = buildBundle({ generatedAt: new Date().toISOString(), range, groupList, listsFetchedAt, results, previous });
   for (const line of log) console.log(`  ${line}`);
 
-  if (results.every((r) => r.error) && !bundle.schedules.some((s) => s.export?.psrozklad_export?.roz_items?.length)) {
+  if (results.every((r) => !r.export) && !bundle.schedules.some((s) => s.export?.psrozklad_export?.roz_items?.length)) {
     throw new Error('Жодного розкладу не отримано — data.json не чіпаю');
   }
   if (sameContent(bundle, previous)) {
