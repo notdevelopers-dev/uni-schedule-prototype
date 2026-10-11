@@ -1,6 +1,6 @@
 // Режим «Мій розклад»: група + підгрупа; «Збірна група» — усе, крім позначеного як «не моє».
 
-import { addDays, formatDayLong, isIsoDate, toUaDate, todayIso } from '../lib/dates.js';
+import { addDays, formatDayLong, isIsoDate, startOfWeek, toUaDate, todayIso } from '../lib/dates.js';
 import { plural } from '../lib/text.js';
 import { addExternal, buildCatalog, filterForUser, listSubgroups, matchesElective } from '../domain/electives.js';
 import { append, h, icon } from './dom.js';
@@ -34,20 +34,40 @@ async function loadCatalog(ctx, groupId) {
 }
 
 /**
- * Якщо дата не задана в адресі: сьогодні, якщо ще є пари; інакше найближчий день з парами.
+ * Що показати, коли дати в адресі немає. lessons — «мої» пари від сьогодні вперед, відсортовані.
+ * День: сьогодні, якщо ще є пари; інакше найближчий день з парами.
+ * Тиждень: поточний, якщо на ньому ще є пари; інакше тиждень найближчої пари (у вихідні — зазвичай наступний).
+ * found: false — попереду пар не знайдено, вирішує виклик.
  */
-async function pickDate(ctx, groupId) {
-  const today = todayIso();
-  const { visible } = await loadMine(ctx, groupId, { from: today, to: addDays(today, 13) });
-  const todays = visible.filter((l) => l.date === today);
-  if (todays.some((l) => lessonTiming(l).state !== 'past')) return { date: today };
-  const next = visible.find((l) => l.date > today);
-  if (next) {
+export function pickStart(lessons, view, today = todayIso()) {
+  const next = lessons.find((l) => l.date > today || (l.date === today && lessonTiming(l).state !== 'past'));
+  if (!next) return { date: today, found: false };
+  if (view === 'week') {
+    const weekEnd = addDays(startOfWeek(today), 6);
+    if (next.date <= weekEnd) return { date: today, found: true };
     return {
       date: next.date,
-      note: todays.length ? 'Сьогодні пари вже закінчилися — показано наступний день з парами.' : 'Сьогодні пар немає — показано найближчий день з парами.',
+      found: true,
+      note: next.date <= addDays(weekEnd, 7)
+        ? 'Цього тижня пар більше немає — показано наступний тиждень.'
+        : 'Цього тижня пар більше немає — показано найближчий тиждень з парами.',
     };
   }
+  if (next.date === today) return { date: today, found: true };
+  return {
+    date: next.date,
+    found: true,
+    note: lessons.some((l) => l.date === today)
+      ? 'Сьогодні пари вже закінчилися — показано наступний день з парами.'
+      : 'Сьогодні пар немає — показано найближчий день з парами.',
+  };
+}
+
+async function pickDate(ctx, groupId, view) {
+  const today = todayIso();
+  const { visible } = await loadMine(ctx, groupId, { from: today, to: addDays(today, 13) });
+  const picked = pickStart(visible, view, today);
+  if (picked.found) return { date: picked.date, note: picked.note };
   const r = ctx.meta.range;
   if (r && (today < r.from || today > r.to)) {
     const { visible: all } = await loadMine(ctx, groupId, r);
@@ -77,7 +97,7 @@ export async function renderMy(root, ctx) {
   let date = isIsoDate(route.query.date) ? route.query.date : null;
   let autoNote = null;
   if (!date) {
-    const picked = view === 'day' ? await pickDate(ctx, group.id) : { date: todayIso() };
+    const picked = await pickDate(ctx, group.id, view);
     date = picked.date;
     autoNote = picked.note ?? null;
   }
@@ -107,7 +127,8 @@ export async function renderMy(root, ctx) {
     notes.push(notice('warn', h('strong', null, group.statusMessage), group.statusCode ? ` (код ${group.statusCode})` : ''));
   }
   if (autoNote) {
-    notes.push(notice('info', autoNote, ' ', h('button', { class: 'link-btn', type: 'button', onclick: () => navigate({ date: todayIso() }) }, 'Показати сьогодні')));
+    notes.push(notice('info', autoNote, ' ', h('button', { class: 'link-btn', type: 'button', onclick: () => navigate({ date: todayIso() }) },
+      view === 'week' ? 'Показати цей тиждень' : 'Показати сьогодні')));
   }
   if (prefs.subgroup == null && subgroups.length > 1) {
     notes.push(notice('info', 'Підгрупу не вибрано — показано пари всіх підгруп. ', h('a', { href: href('settings') }, 'Вибрати підгрупу')));
